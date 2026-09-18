@@ -32,9 +32,13 @@
 <body>
 <div id="map"></div>
 <script>
-// Branch coordinates. The studio database stores names and postal addresses but no
-// lat/lng, so each branch is matched to real surveyed coordinates — first by branch
-// name, then by the town in its address. Anything unmatched simply gets no pin
+// Every branch's exact pin location is resolved live from its real address text via
+// OpenStreetMap's free geocoding service (Nominatim) — so a new branch, or an admin editing
+// an existing branch's address, just works with no code change here. Results are cached per
+// browser (keyed by the exact address string) so an unchanged address is only looked up once,
+// not on every visit — Nominatim's fair-use policy caps live lookups at ~1/second.
+// This small table is kept only as a last-resort fallback for when geocoding fails (offline,
+// Nominatim down, address too vague to resolve) — anything still unmatched simply gets no pin
 // rather than a guessed one.
 var BY_NAME = {
   'horizon square': [1.5187, 103.6300],
@@ -52,12 +56,51 @@ var BY_TOWN = {
   'perak':       [4.5921, 101.0901],
   'johor':       [1.4854, 103.7618]
 };
-function locate(name, address) {
+function fallbackLocate(name, address) {
   var n = String(name || '').toLowerCase(), a = String(address || '').toLowerCase(), k;
   for (k in BY_NAME) if (n.indexOf(k) > -1) return BY_NAME[k];
   for (k in BY_TOWN) if (a.indexOf(k) > -1) return BY_TOWN[k];
   for (k in BY_TOWN) if (n.indexOf(k) > -1) return BY_TOWN[k];
   return null;
+}
+
+var GEO_CACHE_PREFIX = 'bds-geo-v1:';
+var GEO_CACHE_MAX_AGE_MS = 90 * 86400000; // 90 days — real addresses don't move, but this lets a bad lookup self-heal
+function geoCacheGet(address) {
+  try {
+    var raw = localStorage.getItem(GEO_CACHE_PREFIX + address);
+    if (!raw) return null;
+    var obj = JSON.parse(raw);
+    if (!obj || !obj.ll || !(Date.now() - obj.t < GEO_CACHE_MAX_AGE_MS)) return null;
+    return obj.ll;
+  } catch (e) { return null; }
+}
+function geoCacheSet(address, ll) {
+  try { localStorage.setItem(GEO_CACHE_PREFIX + address, JSON.stringify({ ll: ll, t: Date.now() })); } catch (e) {}
+}
+
+var lastLiveGeocodeAt = 0;
+function locate(name, address) {
+  var cached = geoCacheGet(address);
+  if (cached) return Promise.resolve(cached);
+  if (!address) return Promise.resolve(fallbackLocate(name, address));
+  var q = address + (/malaysia/i.test(address) ? '' : ', Malaysia');
+  var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=my&q=' + encodeURIComponent(q);
+  var wait = Math.max(0, 1100 - (Date.now() - lastLiveGeocodeAt)); // stay under Nominatim's ~1 req/s fair-use limit
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      lastLiveGeocodeAt = Date.now();
+      fetch(url, { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (arr) {
+          var hit = arr && arr[0];
+          var ll = hit ? [parseFloat(hit.lat), parseFloat(hit.lon)] : null;
+          if (ll) geoCacheSet(address, ll);
+          resolve(ll || fallbackLocate(name, address));
+        })
+        .catch(function () { resolve(fallbackLocate(name, address)); });
+    }, wait);
+  });
 }
 
 var map = L.map('map', { zoomControl: false, scrollWheelZoom: true, attributionControl: true })
@@ -97,25 +140,31 @@ function pinIcon() {
   return studioIcon;
 }
 
+// Branches resolve one at a time (each `locate()` call chains after the last) so live
+// geocode lookups stay rate-limited; cached ones resolve instantly regardless.
 function render(items) {
   Object.keys(pins).forEach(function (k) { map.removeLayer(pins[k].marker); });
   pins = {}; placed = [];
+  var chain = Promise.resolve();
   (items || []).forEach(function (b) {
-    var ll = locate(b.name, b.address);
-    if (!ll) return;
-    var m = L.marker(ll, { icon: pinIcon(), title: b.name, riseOnHover: true }).addTo(map);
-    var lines = [b.address, b.classes ? (b.classes + (b.classes === 1 ? ' class a week' : ' classes a week')) : '']
-      .filter(Boolean).join('<br>');
-    m.bindPopup('<b>' + b.name + '</b><span>' + lines + '</span>', { className: 'bds-tip', closeButton: false, offset: [0, -6] });
-    m.on('click', function () {
-      parent.postMessage({ type: 'bds-select', name: b.name }, '*');
+    chain = chain.then(function () {
+      return locate(b.name, b.address).then(function (ll) {
+        if (!ll) return;
+        var m = L.marker(ll, { icon: pinIcon(), title: b.name, riseOnHover: true }).addTo(map);
+        var lines = [b.address, b.classes ? (b.classes + (b.classes === 1 ? ' class a week' : ' classes a week')) : '']
+          .filter(Boolean).join('<br>');
+        m.bindPopup('<b>' + b.name + '</b><span>' + lines + '</span>', { className: 'bds-tip', closeButton: false, offset: [0, -6] });
+        m.on('click', function () {
+          parent.postMessage({ type: 'bds-select', name: b.name }, '*');
+        });
+        m.on('mouseover', function () { m.openPopup(); });
+        pins[b.name] = { marker: m };
+        placed.push(ll);
+        if (placed.length > 1) map.fitBounds(L.latLngBounds(placed).pad(0.35), { animate: false });
+        else if (placed.length === 1) map.setView(placed[0], 12, { animate: false });
+      });
     });
-    m.on('mouseover', function () { m.openPopup(); });
-    pins[b.name] = { marker: m };
-    placed.push(ll);
   });
-  if (placed.length > 1) map.fitBounds(L.latLngBounds(placed).pad(0.35), { animate: false });
-  else if (placed.length === 1) map.setView(placed[0], 12, { animate: false });
 }
 
 function mark(el, on) {
