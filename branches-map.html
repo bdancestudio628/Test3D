@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B Dance Studio — branch map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<style>
+  html,body{margin:0;height:100%;background:#07070a}
+  #map{position:absolute;inset:0;background:#07070a}
+  /* OpenStreetMap raster tiles are light; this darkens them to sit inside the studio's
+     black/gold page without changing the tile source or dropping attribution. */
+  .leaflet-tile-pane{filter:grayscale(1) invert(1) brightness(.82) contrast(1.08) saturate(.9)}
+  .leaflet-container{background:#07070a;font-family:'Inter',system-ui,sans-serif}
+  .leaflet-control-attribution{background:rgba(0,0,0,.6)!important;color:#8f8a82!important;font-size:9px!important}
+  .leaflet-control-attribution a{color:#ff9451!important}
+  .leaflet-control-zoom a{background:rgba(12,12,12,.9)!important;color:#ff9451!important;border-color:#2a2a2a!important;
+    width:30px!important;height:30px!important;line-height:30px!important;font-size:18px!important;text-decoration:none!important}
+  .leaflet-control-zoom{border:1px solid rgba(255,122,41,.3)!important;border-radius:8px!important;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.5)!important}
+  .leaflet-control-zoom a:first-child{border-bottom:1px solid #2a2a2a!important}
+  .leaflet-control-zoom a:hover{background:rgba(255,122,41,.18)!important}
+  .leaflet-marker-icon{filter:drop-shadow(0 3px 7px rgba(0,0,0,.55));transition:filter .2s ease}
+  .leaflet-marker-icon:hover{filter:drop-shadow(0 0 12px rgba(255,122,41,.8))}
+  .bds-tip .leaflet-popup-content-wrapper{background:#0c0c0c;color:#f3efe6;border:1px solid rgba(255,122,41,.4);border-radius:10px;box-shadow:0 18px 40px rgba(0,0,0,.6)}
+  .bds-tip .leaflet-popup-content{margin:11px 13px;font-size:12px;line-height:1.55}
+  .bds-tip .leaflet-popup-tip{background:#0c0c0c;border:1px solid rgba(255,122,41,.4)}
+  .bds-tip b{font-family:'Bebas Neue','Inter',sans-serif;font-size:16px;letter-spacing:.6px;color:#fff;display:block;margin-bottom:3px}
+  .bds-tip span{color:#a3a09a}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+// Every branch's exact pin location is resolved live from its real address text via
+// OpenStreetMap's free geocoding service (Nominatim) — so a new branch, or an admin editing
+// an existing branch's address, just works with no code change here. Results are cached per
+// browser (keyed by the exact address string) so an unchanged address is only looked up once,
+// not on every visit — Nominatim's fair-use policy caps live lookups at ~1/second.
+// This small table is kept only as a last-resort fallback for when geocoding fails (offline,
+// Nominatim down, address too vague to resolve) — anything still unmatched simply gets no pin
+// rather than a guessed one.
+var BY_NAME = {
+  'horizon square': [1.5187, 103.6300],
+  'tasek':          [1.5378, 103.6592],
+  'adda':           [1.5330, 103.7500],
+  'kulai':          [1.6591, 103.6039]
+};
+var BY_TOWN = {
+  'kajang':      [2.9927, 101.7909],
+  'johor bahru': [1.4927, 103.7414],
+  'skudai':      [1.5378, 103.6592],
+  'ipoh':        [4.5975, 101.0901],
+  'kulai':       [1.6591, 103.6039],
+  'selangor':    [3.0738, 101.5183],
+  'perak':       [4.5921, 101.0901],
+  'johor':       [1.4854, 103.7618]
+};
+function fallbackLocate(name, address) {
+  var n = String(name || '').toLowerCase(), a = String(address || '').toLowerCase(), k;
+  for (k in BY_NAME) if (n.indexOf(k) > -1) return BY_NAME[k];
+  for (k in BY_TOWN) if (a.indexOf(k) > -1) return BY_TOWN[k];
+  for (k in BY_TOWN) if (n.indexOf(k) > -1) return BY_TOWN[k];
+  return null;
+}
+
+var GEO_CACHE_PREFIX = 'bds-geo-v1:';
+var GEO_CACHE_MAX_AGE_MS = 90 * 86400000; // 90 days — real addresses don't move, but this lets a bad lookup self-heal
+function geoCacheGet(address) {
+  try {
+    var raw = localStorage.getItem(GEO_CACHE_PREFIX + address);
+    if (!raw) return null;
+    var obj = JSON.parse(raw);
+    if (!obj || !obj.ll || !(Date.now() - obj.t < GEO_CACHE_MAX_AGE_MS)) return null;
+    return obj.ll;
+  } catch (e) { return null; }
+}
+function geoCacheSet(address, ll) {
+  try { localStorage.setItem(GEO_CACHE_PREFIX + address, JSON.stringify({ ll: ll, t: Date.now() })); } catch (e) {}
+}
+
+var lastLiveGeocodeAt = 0;
+function locate(name, address) {
+  var cached = geoCacheGet(address);
+  if (cached) return Promise.resolve(cached);
+  if (!address) return Promise.resolve(fallbackLocate(name, address));
+  var q = address + (/malaysia/i.test(address) ? '' : ', Malaysia');
+  var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=my&q=' + encodeURIComponent(q);
+  var wait = Math.max(0, 1100 - (Date.now() - lastLiveGeocodeAt)); // stay under Nominatim's ~1 req/s fair-use limit
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      lastLiveGeocodeAt = Date.now();
+      fetch(url, { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (arr) {
+          var hit = arr && arr[0];
+          var ll = hit ? [parseFloat(hit.lat), parseFloat(hit.lon)] : null;
+          if (ll) geoCacheSet(address, ll);
+          resolve(ll || fallbackLocate(name, address));
+        })
+        .catch(function () { resolve(fallbackLocate(name, address)); });
+    }, wait);
+  });
+}
+
+var map = L.map('map', { zoomControl: false, scrollWheelZoom: true, attributionControl: true })
+  .setView([3.0, 102.2], 6);
+// Bottom-left keeps the controls clear of the branch-count badge the page overlays top-left.
+L.control.zoom({ position: 'bottomleft' }).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors, tiles by Humanitarian OpenStreetMap Team / OSM France',
+  subdomains: 'abc',
+  maxZoom: 19
+}).addTo(map);
+
+var pins = {};   // name -> { marker, el }
+var placed = [];
+
+// The studio's own pin artwork, anchored so the point of the pin sits on the exact location.
+var studioIcon = L.icon({
+  iconUrl: 'assets/marker-icon.png',
+  shadowUrl: 'assets/marker-shadow.png',
+  iconSize: [44, 62],
+  iconAnchor: [22, 62],
+  popupAnchor: [0, -62],
+  shadowSize: [78, 62],
+  shadowAnchor: [17, 62]
+});
+var studioIconOn = L.icon({
+  iconUrl: 'assets/marker-icon.png',
+  shadowUrl: 'assets/marker-shadow.png',
+  iconSize: [62, 87],
+  iconAnchor: [31, 87],
+  popupAnchor: [0, -87],
+  shadowSize: [110, 87],
+  shadowAnchor: [24, 87]
+});
+
+function pinIcon() {
+  return studioIcon;
+}
+
+// Branches resolve one at a time (each `locate()` call chains after the last) so live
+// geocode lookups stay rate-limited; cached ones resolve instantly regardless.
+function render(items) {
+  Object.keys(pins).forEach(function (k) { map.removeLayer(pins[k].marker); });
+  pins = {}; placed = [];
+  var chain = Promise.resolve();
+  (items || []).forEach(function (b) {
+    chain = chain.then(function () {
+      return locate(b.name, b.address).then(function (ll) {
+        if (!ll) return;
+        var m = L.marker(ll, { icon: pinIcon(), title: b.name, riseOnHover: true }).addTo(map);
+        var lines = [b.address, b.classes ? (b.classes + (b.classes === 1 ? ' class a week' : ' classes a week')) : '']
+          .filter(Boolean).join('<br>');
+        m.bindPopup('<b>' + b.name + '</b><span>' + lines + '</span>', { className: 'bds-tip', closeButton: false, offset: [0, -6] });
+        m.on('click', function () {
+          parent.postMessage({ type: 'bds-select', name: b.name }, '*');
+        });
+        m.on('mouseover', function () { m.openPopup(); });
+        pins[b.name] = { marker: m };
+        placed.push(ll);
+        if (placed.length > 1) map.fitBounds(L.latLngBounds(placed).pad(0.35), { animate: false });
+        else if (placed.length === 1) map.setView(placed[0], 12, { animate: false });
+      });
+    });
+  });
+}
+
+function mark(el, on) {
+  if (!el) return;
+  el.style.filter = on
+    ? 'drop-shadow(0 0 14px rgba(255,122,41,.95)) drop-shadow(0 0 30px rgba(255,122,41,.5))'
+    : 'drop-shadow(0 3px 7px rgba(0,0,0,.55))';
+  el.style.zIndex = on ? 900 : '';
+}
+
+// The selected branch gets the larger pin, so it reads clearly against the others.
+function setIcon(name, on) {
+  var p = pins[name];
+  if (!p) return;
+  p.marker.setIcon(on ? studioIconOn : studioIcon);
+  mark(p.marker.getElement(), on);
+}
+
+function focus(name) {
+  Object.keys(pins).forEach(function (k) { setIcon(k, k === name); });
+  var p = pins[name];
+  if (!p) return;
+  map.flyTo(p.marker.getLatLng(), 13, { duration: 0.9 });
+  p.marker.openPopup();
+}
+
+addEventListener('message', function (e) {
+  var d = e.data || {};
+  if (d.type === 'bds-branches') render(d.items);
+  else if (d.type === 'bds-focus') focus(d.name);
+  else if (d.type === 'bds-reset' && placed.length > 1) {
+    Object.keys(pins).forEach(function (k) { setIcon(k, false); });
+    map.closePopup();
+    map.flyToBounds(L.latLngBounds(placed).pad(0.35), { duration: 0.9 });
+  }
+});
+
+parent.postMessage({ type: 'bds-map-ready' }, '*');
+</script>
+</body>
+</html>

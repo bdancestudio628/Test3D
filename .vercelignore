@@ -1,0 +1,11 @@
+# These never get deployed at all — the cleanest equivalent of the old Netlify
+# _redirects rule that blocked README.txt / version.txt / *.sql from being served.
+# (Vercel rewrites can't fake a 404 status the way Netlify's "404!" flag did, so
+# "don't ship the file" is the correct fix, not a rewrite trick.)
+README.txt
+version.txt
+*.sql
+netlify.toml
+netlify/
+_redirects
+MOBILE-REDIRECT-SETUP.md
