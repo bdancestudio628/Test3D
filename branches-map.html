@@ -64,10 +64,10 @@ var map = L.map('map', { zoomControl: false, scrollWheelZoom: true, attributionC
   .setView([3.0, 102.2], 6);
 // Bottom-left keeps the controls clear of the branch-count badge the page overlays top-left.
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap contributors © CARTO',
-  subdomains: 'abcd',
-  maxZoom: 20
+L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors, tiles by Humanitarian OpenStreetMap Team / OSM France',
+  subdomains: 'abc',
+  maxZoom: 19
 }).addTo(map);
 
 var pins = {};   // name -> { marker, el }
