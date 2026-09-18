@@ -70,7 +70,7 @@ a:hover{color:#ffab5c}
       <button onClick="{{ setEn }}" style="background:{{ enBg }};border:none;color:{{ enColor }};font-size:11px;font-weight:700;padding:0 13px;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;transition:background .15s ease,color .15s ease">EN</button>
       <button onClick="{{ setZh }}" style="background:{{ zhBg }};border:none;color:{{ zhColor }};font-size:11px;font-weight:700;padding:0 13px;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;transition:background .15s ease,color .15s ease">中文</button>
     </div>
-    <a href="#support" style="height:30px;padding:0 15px;border-radius:999px;border:1px solid #ff7a29;background:#ff7a29;display:flex;align-items:center;gap:6px;flex:none;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1.2px;color:#1a1006;text-decoration:none;transition:background .15s ease,box-shadow .15s ease" style-hover="background:#ffa057;box-shadow:0 0 0 3px rgba(255,122,41,.22)">
+    <a href="https://www.bdancestudio.com.my/" style="height:30px;padding:0 15px;border-radius:999px;border:1px solid #ff7a29;background:#ff7a29;display:flex;align-items:center;gap:6px;flex:none;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1.2px;color:#1a1006;text-decoration:none;transition:background .15s ease,box-shadow .15s ease" style-hover="background:#ffa057;box-shadow:0 0 0 3px rgba(255,122,41,.22)">
       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12 11a3.6 3.6 0 1 0 0-7.2A3.6 3.6 0 0 0 12 11z"></path>
         <path d="M4.8 20.4c0-3.4 3.2-5.6 7.2-5.6s7.2 2.2 7.2 5.6"></path>
@@ -439,7 +439,7 @@ a:hover{color:#ffab5c}
 </div>
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;showSocialRail&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Hero&quot;},&quot;heroVideoSrc&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;assets/hero.mp4&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Hero&quot;},&quot;supportVideoSrc&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;assets/hero.mp4&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Support&quot;},&quot;dataApiUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;/api/db&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Studio data&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;showSocialRail&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Hero&quot;},&quot;heroVideoSrc&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;assets/hero.mp4&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Hero&quot;},&quot;supportVideoSrc&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;assets/hero.mp4&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Support&quot;},&quot;dataApiUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://www.bdancestudio.com.my/api/db&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Studio data&quot;}}">
 const PALETTE=['#ff7a29','#4ade80','#60a5fa','#f472b6','#facc15','#a78bfa','#2dd4bf','#fb7185'];
 const NAV=[
   {href:'#hero',en:'Home',zh:'首页'},
@@ -678,7 +678,7 @@ class Component extends DCLogic {
     })});
   }
   async loadStudioData(){
-    const url=this.props.dataApiUrl??'/api/db';
+    const url=this.props.dataApiUrl??'https://www.bdancestudio.com.my/api/db';
     if(!url)return;
     try{
       const mod=await import('./bds-data.js');
