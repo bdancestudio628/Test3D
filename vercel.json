@@ -27,6 +27,12 @@
       ]
     },
     {
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
@@ -44,9 +50,11 @@
       ],
       "destination": "https://mobile.bdancestudio.com.my",
       "permanent": false
+    },
+    {
+      "source": "/",
+      "destination": "/loading.html",
+      "permanent": false
     }
-  ],
-  "rewrites": [
-    { "source": "/", "destination": "/loading.html" }
   ]
 }
