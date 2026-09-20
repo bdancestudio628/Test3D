@@ -567,6 +567,9 @@ a:hover{color:#ffab5c}
       <sc-if value="{{ hasSupportVideo }}" hint-placeholder-val="{{ true }}">
         <video data-src="{{ supportVideoSrc }}" loop="{{ true }}" preload="metadata" poster="assets/event-poster.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
       </sc-if>
+      <sc-if value="{{ hasSupportEmbed }}" hint-placeholder-val="{{ false }}">
+        <iframe src="{{ supportEmbedSrc }}" loading="lazy" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen="{{ true }}" style="position:absolute;inset:0;width:100%;height:100%;border:0;display:block"></iframe>
+      </sc-if>
       <sc-if value="{{ noSupportVideo }}" hint-placeholder-val="{{ false }}">
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px dashed rgba(255,122,41,.4);border-radius:14px;text-align:center;padding:16px">
           <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:#ff7a29">{{ ui.reelTitle }}</div>
@@ -990,9 +993,11 @@ class Component extends DCLogic {
       hasVideo:true,
       noVideo:false,
       videoSrc:this.props.heroVideoSrc||'assets/hero.mp4',
-      hasSupportVideo:true,
+      hasSupportVideo:!live.highlight||live.highlight.kind==='file',
+      hasSupportEmbed:!!live.highlight&&live.highlight.kind==='embed',
       noSupportVideo:false,
-      supportVideoSrc:this.props.supportVideoSrc||'assets/hero.mp4',
+      supportVideoSrc:(live.highlight&&live.highlight.fileUrl)||this.props.supportVideoSrc||'assets/hero.mp4',
+      supportEmbedSrc:(live.highlight&&live.highlight.embedUrl)||'',
       videoRef:this.videoRef,
       isMuted:this.state.muted,
       toggleSound:this.toggleSound,

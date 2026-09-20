@@ -53,6 +53,26 @@ const LEVEL_ZH = {
 const uniq = (a) => [...new Set(a.filter(Boolean))];
 const zhList = (a) => a.join('、');
 
+// Same URL shapes the admin app's own videoEmbedHTML() recognises (index.html) — a YouTube,
+// Vimeo or Instagram link needs an iframe embed, everything else (a direct .mp4/.webm, or an
+// Instagram reel already imported to a permanent Supabase file) plays in a plain <video>.
+export function classifyVideoUrl(url) {
+  url = (url || '').trim();
+  if (!url) return null;
+  let m;
+  if ((m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{6,})/))) {
+    return { kind: 'embed', embedUrl: 'https://www.youtube.com/embed/' + m[1] };
+  }
+  if ((m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/))) {
+    return { kind: 'embed', embedUrl: 'https://player.vimeo.com/video/' + m[1] };
+  }
+  if ((m = url.match(/instagram\.com\/(reels?|p|tv)\/([A-Za-z0-9_-]+)/i))) {
+    const type = m[1].toLowerCase() === 'reels' ? 'reel' : m[1].toLowerCase();
+    return { kind: 'embed', embedUrl: 'https://www.instagram.com/' + type + '/' + m[2] + '/embed' };
+  }
+  return { kind: 'file', fileUrl: url };
+}
+
 export async function fetchDb(url, timeoutMs) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs || 8000);
@@ -186,11 +206,24 @@ export function mapDb(db) {
       poster: e.poster || ''
     }));
 
+  // Highlight Video — set on the admin's Edit Intro Page screen ("Highlight Video" section),
+  // stored as db.intro.videoUrl/videoEyebrow/videoTitle and already public via publicSlice().
+  const introCfg = db.intro || {};
+  const highlightVideo = classifyVideoUrl(introCfg.videoUrl);
+  const highlight = highlightVideo ? {
+    eyebrow: introCfg.videoEyebrow || '',
+    title: introCfg.videoTitle || '',
+    kind: highlightVideo.kind,
+    fileUrl: highlightVideo.fileUrl || '',
+    embedUrl: highlightVideo.embedUrl || ''
+  } : null;
+
   return {
     roster: roster.length ? roster : null,
     styles: styles.length ? styles : null,
     branches: branches.length ? branches : null,
     events: events.length ? events : null,
+    highlight: highlight,
     styleZh: STYLE_ZH
   };
 }
