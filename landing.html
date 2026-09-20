@@ -377,17 +377,26 @@ a:hover{color:#ffab5c}
             <sc-if value="{{ featured.noPhoto }}" hint-placeholder-val="{{ false }}">
               <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:clamp(46px,6vw,82px);letter-spacing:1px;color:rgba(26,16,6,.82)">{{ featured.initials }}</span>
             </sc-if>
-            <sc-if value="{{ featured.hasVideo }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ featured.showVideo }}" hint-placeholder-val="{{ false }}">
               <video data-src="{{ featured.video }}" loop="{{ true }}" preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
             </sc-if>
             <span aria-hidden="true" style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 48%,rgba(0,0,0,.6));pointer-events:none"></span>
             <span aria-hidden="true" style="position:absolute;top:0;bottom:0;left:0;width:45%;background:linear-gradient(90deg,transparent,rgba(255,210,165,.55),transparent);animation:{{ animSweep }};pointer-events:none"></span>
             <span aria-hidden="true" style="position:absolute;top:0;bottom:0;left:0;width:2px;background:linear-gradient(180deg,transparent,#fff,transparent);box-shadow:0 0 18px rgba(255,255,255,.8);animation:{{ animLine }};pointer-events:none"></span>
             <span aria-hidden="true" style="position:absolute;left:50%;top:50%;width:150%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,122,41,.5),transparent 62%);animation:{{ animGlow }};pointer-events:none"></span>
-            <sc-if value="{{ featured.hasVideo }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ featured.showVideo }}" hint-placeholder-val="{{ false }}">
               <span style="position:absolute;left:10px;top:10px;display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid rgba(255,122,41,.45);background:rgba(7,7,10,.72);backdrop-filter:blur(6px);pointer-events:none">
                 <span style="width:6px;height:6px;border-radius:50%;background:#ff7a29;box-shadow:0 0 8px rgba(255,122,41,.9);display:block"></span>
                 <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#e8e4dc">{{ ui.reelBadge }}</span>
+              </span>
+            </sc-if>
+            <sc-if value="{{ featured.hasVideo }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ featured.toggleMedia }}" aria-label="{{ featured.mediaBtnLabel }}" style="position:absolute;right:10px;bottom:10px;z-index:5;width:32px;height:32px;border-radius:50%;cursor:pointer;border:1px solid rgba(255,255,255,.28);background:rgba(7,7,10,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;transition:border-color .15s ease,transform .15s ease" style-hover="border-color:#ff7a29;transform:scale(1.08)">
+                <span style="display:block;width:7px;height:7px;border-right:2px solid #f3efe6;border-bottom:2px solid #f3efe6;transform:{{ featured.mediaBtnRotate }}"></span>
+              </button>
+              <span style="position:absolute;right:14px;bottom:52px;z-index:5;display:flex;flex-direction:column;gap:5px;pointer-events:none">
+                <span style="width:6px;height:6px;border-radius:50%;background:#fff;opacity:{{ featured.photoDotOpacity }}"></span>
+                <span style="width:6px;height:6px;border-radius:50%;background:#fff;opacity:{{ featured.videoDotOpacity }}"></span>
               </span>
             </sc-if>
             <span style="position:absolute;left:0;right:0;bottom:0;padding:12px 13px;display:flex;flex-direction:column;gap:2px;pointer-events:none">
@@ -428,7 +437,6 @@ a:hover{color:#ffab5c}
 
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;animation:{{ animBtns }}">
               <a href="#classes" style="padding:12px 24px;border-radius:999px;border:1px solid #ff7a29;background:#ff7a29;color:#1a1006;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;text-decoration:none;transition:transform .12s ease,box-shadow .12s ease" style-hover="background:#ffa057;transform:translate(-3px,-3px);box-shadow:5px 5px 0 #ff4d2e">{{ ui.bookBtn }}</a>
-              <a href="#support" style="padding:12px 24px;border-radius:999px;border:1px solid #3d3a36;background:transparent;color:#f5f1e8;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;text-decoration:none;transition:.15s" style-hover="border-color:#ff7a29;color:#ff7a29">{{ ui.askBtn }}</a>
               <sc-for list="{{ featuredLinks }}" as="l" hint-placeholder-count="0">
                 <a href="{{ l.href }}" target="_blank" rel="noopener" style="padding:12px 18px;border-radius:999px;border:1px solid rgba(255,122,41,.4);background:rgba(255,122,41,.08);color:#ffab5c;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1.2px;text-decoration:none;transition:.15s" style-hover="border-color:#ff7a29;color:#ff7a29">{{ l.label }}</a>
               </sc-for>
@@ -567,9 +575,6 @@ a:hover{color:#ffab5c}
       <sc-if value="{{ hasSupportVideo }}" hint-placeholder-val="{{ true }}">
         <video data-src="{{ supportVideoSrc }}" loop="{{ true }}" preload="metadata" poster="assets/event-poster.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
       </sc-if>
-      <sc-if value="{{ hasSupportEmbed }}" hint-placeholder-val="{{ false }}">
-        <iframe src="{{ supportEmbedSrc }}" loading="lazy" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen="{{ true }}" style="position:absolute;inset:0;width:100%;height:100%;border:0;display:block"></iframe>
-      </sc-if>
       <sc-if value="{{ noSupportVideo }}" hint-placeholder-val="{{ false }}">
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px dashed rgba(255,122,41,.4);border-radius:14px;text-align:center;padding:16px">
           <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:#ff7a29">{{ ui.reelTitle }}</div>
@@ -624,7 +629,7 @@ const UI={
     evBtn:'Register →',
     brTitle:'Branches',brScript:'Where to find us',directions:'Get directions →',showAllPins:'Show all',
     lblClasses:'Classes / week',lblTeaches:'Teaches at',lblDays:'Class days',
-    bookBtn:'Book this class',askBtn:'Ask a question',
+    bookBtn:'Book this class',
     reelBadge:'Showreel',newTeacherKicker:'New to the team',
     newTeacherBody:'A new coming teacher — their full introduction is on the way. Message us and we will tell you what they teach.',
     supEyebrow:'Support · 联络我们',supH1:'Your First Count',supH2:'Of Eight Starts Here',
@@ -643,7 +648,7 @@ const UI={
     evBtn:'立即报名 →',
     brTitle:'分店地址',brScript:'Branches',directions:'查看路线 →',showAllPins:'全部分店',
     lblClasses:'每周堂数',lblTeaches:'授课分店',lblDays:'上课日',
-    bookBtn:'预约这堂课',askBtn:'咨询我们',
+    bookBtn:'预约这堂课',
     reelBadge:'导师影片',newTeacherKicker:'新加入导师',
     newTeacherBody:'新加入的导师，完整介绍即将上线。欢迎先联络我们，了解他所教的课程。',
     supEyebrow:'联络我们 · Support',supH1:'你的第一个八拍',supH2:'就从这里开始',
@@ -730,7 +735,7 @@ const NEWS=[
    sub:'Free 45-minute taster with Mei Xin at Adda Height and Tasek.',subZh:'由美欣带领的 45 分钟免费体验，Adda Height 与 Tasek 同步举行。',date:'09-11'}
 ];
 class Component extends DCLogic {
-  state={sel:0,showAll:false,newsTab:'all',styleFilter:'All',muted:true,lang:'en',branchSel:-1,autoPlay:true};
+  state={sel:0,showAll:false,newsTab:'all',styleFilter:'All',muted:true,lang:'en',branchSel:-1,autoPlay:true,mediaSlide:'photo'};
   mapRef=React.createRef();
   videoRef=React.createRef();
   toggleSound=()=>{
@@ -797,7 +802,7 @@ class Component extends DCLogic {
       const idxs=self.visibleIndices();
       if(idxs.length<2)return;
       const at=idxs.indexOf(self.state.sel);
-      self.setState({sel:idxs[(at+1)%idxs.length]});
+      self.setState({sel:idxs[(at+1)%idxs.length],mediaSlide:'photo'});
     },3000);
     // Geometry rather than an IntersectionObserver: thresholds behave unpredictably when a
     // section is taller than the viewport, and this also self-corrects without scroll events.
@@ -993,11 +998,9 @@ class Component extends DCLogic {
       hasVideo:true,
       noVideo:false,
       videoSrc:this.props.heroVideoSrc||'assets/hero.mp4',
-      hasSupportVideo:!live.highlight||live.highlight.kind==='file',
-      hasSupportEmbed:!!live.highlight&&live.highlight.kind==='embed',
+      hasSupportVideo:true,
       noSupportVideo:false,
-      supportVideoSrc:(live.highlight&&live.highlight.fileUrl)||this.props.supportVideoSrc||'assets/hero.mp4',
-      supportEmbedSrc:(live.highlight&&live.highlight.embedUrl)||'',
+      supportVideoSrc:this.props.supportVideoSrc||'assets/hero.mp4',
       videoRef:this.videoRef,
       isMuted:this.state.muted,
       toggleSound:this.toggleSound,
@@ -1069,7 +1072,7 @@ class Component extends DCLogic {
           rowBg:active?'rgba(255,122,41,.12)':'transparent',
           rowBar:active?'#ff7a29':'transparent',
           levelColor:active?'#ffab5c':'#6f6a63',
-          select:function(){self.setState({sel:i,autoPlay:false});}
+          select:function(){self.setState({sel:i,autoPlay:false,mediaSlide:'photo'});}
         };
       }),
       canExpand:pool.length>5,
@@ -1100,7 +1103,13 @@ class Component extends DCLogic {
         noBio:!body,
         noPhoto:!t.photo,
         hasVideo:!!t.video,
+        showVideo:!!t.video&&this.state.mediaSlide==='video',
         video:t.video||'',
+        mediaBtnLabel:this.state.mediaSlide==='video'?(zh?'返回照片':'Back to photo'):(zh?'播放导师影片':'Play showreel'),
+        mediaBtnRotate:this.state.mediaSlide==='video'?'rotate(135deg)':'rotate(-45deg)',
+        photoDotOpacity:this.state.mediaSlide==='video'?0.35:1,
+        videoDotOpacity:this.state.mediaSlide==='video'?1:0.35,
+        toggleMedia:function(){self.setState(function(s){return {mediaSlide:s.mediaSlide==='video'?'photo':'video'};});},
         stats:[
           {label:ui.lblClasses,value:String(t.classes),font:"'Bebas Neue',sans-serif",size:'28px',color:'#ff9451',lh:'1.1',mt:'0'},
           {label:ui.lblTeaches,value:zh?t.placesZh:t.places,font:"'Inter',sans-serif",size:'12.5px',color:'#f5f1e8',lh:'1.5',mt:'4px'},
