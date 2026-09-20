@@ -2782,15 +2782,7 @@ function openBranchLinksModal(title){
   openM('m-branch-links');
 }
 function backToSite(){
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('branch-screen').style.display='none';
-  document.getElementById('cred-screen').style.display='none';
-  showBusy(tr('msg.busyLoading'),true);
-  const ssEl=document.getElementById('site-screen');
-  if(ssEl) ssEl.classList.remove('hero-ready');
-  renderSiteScreen(); // always re-render in the current language
-  document.getElementById('site-screen').style.display='block';
-  hideBusy();
+  location.href='/landing.html';
 }
 // Fallback text if a branch (old data from before this field existed) has no address saved yet.
 const DEFAULT_PLACE_ADDRESS={1:'Adda Height, Kajang, Selangor',2:'Horizon Square, Johor Bahru, Johor',3:'Tasek, Ipoh, Perak',4:'Kulai, Johor'};
@@ -4785,21 +4777,10 @@ function doLogout(){
   document.getElementById('cred-screen').style.display='none';
   document.getElementById('login-screen').style.display='none';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  // Signing out IS "going to the landing page" from the visitor's point of view, so it gets the same
-  // loading moment as a fresh visit — and the hero (count, heading, reel video, everything gated
-  // behind .hero-ready) is reset so it plays again here too, not just the very first time the page
-  // was ever opened. Nothing below actually needs to wait on anything; showBusy/hideBusy still holds
-  // it up for a moment on purpose, the same as any other loading screen, rather than skipping straight
-  // to a silent instant swap.
   showBusy(tr('msg.busyLoading'),true);
-  const ssEl=document.getElementById('site-screen');
-  if(ssEl) ssEl.classList.remove('hero-ready');
-  // return to the intro (studio site) page, re-rendered in whatever language the user
-  // switched to while logged in — the login screens are re-translated too
   translateStatic();
   translateLoginScreens();
-  renderSiteScreen();
-  document.getElementById('site-screen').style.display='block';
+  showLoginFromSite();
   hideBusy();
   toast(tr('msg.signedOut'));
 }
@@ -10379,7 +10360,7 @@ function exportDatabaseXLSX(){
 }
 function importDatabaseCSVText(text){
   try{ applyDB(combinedCSVtoDB(text)); ensureStudentExtras(); toast(tr('msg.dbImported'));
-    if(session&&currentPageId) showPage(currentPageId); else renderSiteScreen(); }
+    if(session&&currentPageId) showPage(currentPageId); else showLoginFromSite(); }
   catch(e){ toast(tr('msg.dbImportFail'),false); }
 }
 function handleDbFile(input){ const f=input.files&&input.files[0]; if(!f) return; const rd=new FileReader();
@@ -11284,7 +11265,7 @@ fetchAppVersionTag().then(t=>{ if(t) appVersionTag=t; });
       }
     }
   }catch(e){}
-  if(restoredSession) enterApp(); else{ clearPersistedSession(); renderSiteScreen(); }
+  if(restoredSession) enterApp(); else{ clearPersistedSession(); showLoginFromSite(); }
   } finally { hideBusy(); BDSLoading.done(); }  // finally: a throw mid-boot must never strand an overlay over a dead app
   setInterval(()=>{ try{ saveDB(); }catch(e){} try{ cloudSave(); }catch(e){} }, 4000); // autosave to cloud + browser — this is also what recovers the connection automatically once it's back
   // cloudSave() above only ever PULLS when it also has something local to PUSH — an idle device just
