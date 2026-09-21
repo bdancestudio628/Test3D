@@ -1,0 +1,12 @@
+{
+  "name": "B Dance Studio",
+  "short_name": "B Dance",
+  "start_url": "/mobile.html",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#ff7a29",
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
