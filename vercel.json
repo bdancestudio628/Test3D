@@ -56,6 +56,9 @@
     },
     {
       "source": "/",
+      "missing": [
+        { "type": "header", "key": "user-agent", "value": ".*(iPhone|iPod|Android.*Mobile|BlackBerry|IEMobile|Opera Mini|Windows Phone|Mobile Safari).*" }
+      ],
       "destination": "/loading.html",
       "permanent": false
     }
