@@ -287,7 +287,7 @@ i.ph{display:inline-block;vertical-align:-.11em;font-style:normal}
         <button data-row="1" onClick="{{ tc.open }}" style="position:relative;overflow:hidden;width:100%;text-align:left;background:var(--card);border:1px solid var(--bd);padding:11px;display:flex;align-items:center;gap:12px;cursor:pointer">
           <span data-part="sweep" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;opacity:0;background:linear-gradient(100deg,transparent 25%,rgba(255,122,41,.22) 50%,transparent 75%)"></span>
           <sc-if value="{{ tc.hasPhoto }}" hint-placeholder-val="{{ false }}">
-          <img data-lazysrc="{{ tc.photo }}" alt="{{ tc.name }}" style="width:54px;height:54px;border-radius:50%;flex-shrink:0;object-fit:cover" />
+          <img data-avatar="1" data-lazysrc="{{ tc.photo }}" alt="{{ tc.name }}" style="width:54px;height:54px;border-radius:50%;flex-shrink:0;object-fit:cover" />
           </sc-if>
           <sc-if value="{{ !tc.hasPhoto }}" hint-placeholder-val="{{ true }}">
           <div data-part="num" style="width:54px;height:54px;border-radius:50%;flex-shrink:0;background:linear-gradient(150deg,{{ tc.c1 }},{{ tc.c2 }});display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:19px">{{ tc.initial }}</div>
@@ -1094,7 +1094,7 @@ i.ph{display:inline-block;vertical-align:-.11em;font-style:normal}
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
               <div style="display:flex;align-items:flex-start;gap:11px;min-width:0">
                 <sc-if value="{{ c.tcHasPhoto }}" hint-placeholder-val="{{ false }}">
-                <img data-lazysrc="{{ c.tcPhoto }}" alt="{{ c.teacher }}" style="width:60px;height:60px;border-radius:50%;flex-shrink:0;object-fit:cover;border:1px solid var(--bd)" />
+                <img data-avatar="1" data-lazysrc="{{ c.tcPhoto }}" alt="{{ c.teacher }}" style="width:60px;height:60px;border-radius:50%;flex-shrink:0;object-fit:cover;border:1px solid var(--bd)" />
                 </sc-if>
                 <sc-if value="{{ !c.tcHasPhoto }}" hint-placeholder-val="{{ true }}">
                 <div style="width:60px;height:60px;border-radius:50%;flex-shrink:0;background:linear-gradient(150deg,{{ c.tcC1 }},{{ c.tcC2 }});display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:22px">{{ c.tcInitial }}</div>
@@ -1148,7 +1148,7 @@ i.ph{display:inline-block;vertical-align:-.11em;font-style:normal}
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px">
               <div style="display:flex;align-items:flex-start;gap:11px;min-width:0">
                 <sc-if value="{{ c.tcHasPhoto }}" hint-placeholder-val="{{ false }}">
-                <img data-lazysrc="{{ c.tcPhoto }}" alt="teacher" style="width:60px;height:60px;border-radius:50%;flex-shrink:0;object-fit:cover;border:1px solid var(--bd)" />
+                <img data-avatar="1" data-lazysrc="{{ c.tcPhoto }}" alt="teacher" style="width:60px;height:60px;border-radius:50%;flex-shrink:0;object-fit:cover;border:1px solid var(--bd)" />
                 </sc-if>
                 <sc-if value="{{ !c.tcHasPhoto }}" hint-placeholder-val="{{ true }}">
                 <div style="width:60px;height:60px;border-radius:50%;flex-shrink:0;background:linear-gradient(150deg,{{ c.tcC1 }},{{ c.tcC2 }});display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:22px">{{ c.tcInitial }}</div>
@@ -1674,7 +1674,7 @@ i.ph{display:inline-block;vertical-align:-.11em;font-style:normal}
 
       <div style="background:var(--card);border:1px solid var(--bd);padding:14px;margin-bottom:12px;display:flex;align-items:center;gap:13px">
         <sc-if value="{{ hasMeCardPhoto }}" hint-placeholder-val="{{ false }}">
-        <img data-lazysrc="{{ meCardPhoto }}" alt="{{ meCardName }}" style="width:64px;height:64px;border-radius:50%;flex-shrink:0;object-fit:cover" />
+        <img data-avatar="1" data-lazysrc="{{ meCardPhoto }}" alt="{{ meCardName }}" style="width:64px;height:64px;border-radius:50%;flex-shrink:0;object-fit:cover" />
         </sc-if>
         <sc-if value="{{ !hasMeCardPhoto }}" hint-placeholder-val="{{ true }}">
         <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(150deg,var(--acc),#7a2d0c);display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -4093,7 +4093,54 @@ class Component extends DCLogic {
     // never auto-fetched by the browser, so this sidesteps that entirely.
     q('[data-lazysrc]').forEach(el => {
       const url = el.getAttribute('data-lazysrc') || '';
-      if (url && !url.includes('{{') && el.src !== url) el.src = url;
+      if (!url || url.includes('{{') || el.src === url) return;
+      // Avatars get re-sampled on a canvas below, which needs a CORS-clean image.
+      if (el.hasAttribute('data-avatar') && !el.crossOrigin) el.crossOrigin = 'anonymous';
+      el.src = url;
+    });
+
+    // Small circular avatars were soft: the source photos are ~675x900 and the browser was
+    // squashing them ~12x in one cheap step. Re-sample once per photo on a canvas, halving at
+    // high quality until close to the target, and swap the crisp result in.
+    q('img[data-avatar]').forEach(el => {
+      if (el.__sharpFor === el.src || !el.src || el.src.startsWith('data:')) return;
+      if (!el.crossOrigin) { el.crossOrigin = 'anonymous'; const u = el.src; el.src = ''; el.src = u; }
+      const run = () => {
+        const box = el.getBoundingClientRect();
+        const target = Math.round(Math.max(box.width, 48) * Math.max(window.devicePixelRatio || 1, 3));
+        if (!el.naturalWidth || el.naturalWidth < target * 1.4) return;
+        try {
+          const side = Math.min(el.naturalWidth, el.naturalHeight);
+          let cv = document.createElement('canvas');
+          cv.width = cv.height = side;
+          let cx = cv.getContext('2d');
+          cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+          cx.drawImage(el, (el.naturalWidth - side) / 2, (el.naturalHeight - side) / 2, side, side, 0, 0, side, side);
+          let cur = side;
+          while (cur > target * 2) {
+            const next = Math.max(target, Math.round(cur / 2));
+            const nc = document.createElement('canvas');
+            nc.width = nc.height = next;
+            const nx = nc.getContext('2d');
+            nx.imageSmoothingEnabled = true; nx.imageSmoothingQuality = 'high';
+            nx.drawImage(cv, 0, 0, cur, cur, 0, 0, next, next);
+            cv = nc; cur = next;
+          }
+          if (cur > target) {
+            const nc = document.createElement('canvas');
+            nc.width = nc.height = target;
+            const nx = nc.getContext('2d');
+            nx.imageSmoothingEnabled = true; nx.imageSmoothingQuality = 'high';
+            nx.drawImage(cv, 0, 0, cur, cur, 0, 0, target, target);
+            cv = nc;
+          }
+          const out = cv.toDataURL('image/png');
+          el.__sharpFor = out;
+          el.src = out;
+        } catch (e) { el.__sharpFor = el.src; } // tainted canvas: leave the original in place
+      };
+      if (el.complete && el.naturalWidth) run();
+      else el.addEventListener('load', run, { once: true });
     });
 
     // Same fix as data-lazysrc above, but for typed <input> values (date/time/number) — those
